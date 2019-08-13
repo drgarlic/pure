@@ -4,32 +4,11 @@
 #  | bsh |  ||--' ||  | ||-+' ||-
 #  | bbl |  ||    `\__' ||  \ ||__|
 #
-# Description:              Library containing all the snipets from the Pure Bash Bible
+# Description:              A library version of the Pure Bash Bible
 # Dependencies:             bash 4+
 # Optionnal dependencies:   none
 # Author:                   gawlk
 # Contributors:             none
-
-# This library only contains the functions with almost no indication whatsoever on how to use them.
-# For more information please go directly to the original github: 
-# https://github.com/dylanaraps/pure-bash-bible
-#
-# Last time updated: 12 July 2018
-
-# ---
-# FOREWORD
-# ---
-
-# A collection of pure bash alternatives to external processes and programs. 
-# The bash scripting language is more powerful than people realise and most tasks can be accomplished 
-# without depending on external programs.
-#
-# Calling an external process in bash is expensive and excessive use will cause a noticeable slowdown. 
-# Scripts and programs written using built-in methods (where applicable) will be faster, 
-# require less dependencies and afford a better understanding of the language itself.
-#
-# The contents of this book provide a reference for solving problems encountered when writing programs 
-# and scripts in bash. Examples are in function formats showcasing how to incorporate these solutions into code.
 
 # ---
 # STRINGS
@@ -58,6 +37,17 @@ pure.regex() {
     [[ $1 =~ $2 ]] && printf '%s\n' "${BASH_REMATCH[1]}"
 }
 
+# Hex color regex
+pure.is_hex_color() {
+    if [[ $1 =~ ^(#?([a-fA-F0-9]{6}|[a-fA-F0-9]{3}))$ ]]
+    then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    else
+        printf '%s\n' "error: $1 is an invalid color."
+        return 1
+    fi
+}
+
 # Split a string on a delimiter
 pure.split() {
    # Usage: split "string" "delimiter"
@@ -75,6 +65,12 @@ pure.lower() {
 pure.upper() {
     # Usage: upper "string"
     printf '%s\n' "${1^^}"
+}
+
+# Reverse a string case
+pure.reverse_case() {
+    # Usage: reverse_case "string"
+    printf '%s\n' "${1~~}"
 }
 
 # Trim quotes from a string
@@ -106,6 +102,32 @@ pure.lstrip() {
 pure.rstrip() {
     # Usage: rstrip "string" "pattern"
     printf '%s\n' "${1%%$2}"
+}
+
+# Percent-encode a string
+pure.urlencode() {
+    # Usage: urlencode "string"
+    local LC_ALL=C
+    for (( i = 0; i < ${#1}; i++ )); do
+        : "${1:i:1}"
+        case "$_" in
+            [a-zA-Z0-9.~_-])
+                printf '%s' "$_"
+            ;;
+
+            *)
+                printf '%%%02X' "'$_"
+            ;;
+        esac
+    done
+    printf '\n'
+}
+
+# Decode a percent-encoded string
+pure.urldecode() {
+    # Usage: urldecode "string"
+    : "${1//+/ }"
+    printf '%b\n' "${_//%/\\x}"
 }
 
 # Check if string contains a sub-string
@@ -144,7 +166,7 @@ pure.remove_array_dups() {
     declare -A tmp_array
 
     for i in "$@"; do
-        [[ "$i" ]] && IFS=" " tmp_array["${i:- }"]=1
+        [[ $i ]] && IFS=" " tmp_array["${i:- }"]=1
     done
 
     printf '%s\n' "${!tmp_array[@]}"
@@ -164,67 +186,13 @@ pure.cycle() {
 }
 
 # ---
-# LOOPS
-# ---
-
-# Loop over a range of numbers
-# Loop from 0-100 (no variable support).
-# for i in {0..100}; do
-#     printf '%s\n' "$i"
-# done
-
-# -
-
-# Loop over a variable range of numbers
-# Loop from 0-VAR.
-# VAR=50
-# for ((i=0;i<=VAR;i++)); do
-#     printf '%s\n' "$i"
-# done
-
-# -
-
-# Loop over an array
-# Just elements.
-# for element in "${arr[@]}"; do
-#     printf '%s\n' "$element"
-# done
-
-# -
-
-# Loop over an array with an index
-# Elements and index.
-# for i in "${!arr[@]}"; do
-#     printf '%s\n' "${arr[$i]}"
-# done
-
-# -
-
-# Loop over the contents of a file
-# while read -r line; do
-#     printf '%s\n' "$line"
-# done < "file"
-
-# -
-
-# Loop over files and directories
-# Greedy example.
-# for file in *; do
-#     printf '%s\n' "$file"
-# done
-
-# -
-
-# More on the official github
-
-# ---
 # FILE HANDLING
 # ---
 
 # Read a file to a string
 pure.file_to_string() {
     # Usage file_to_string ".Xresources"
-    echo "$(<"$1")"
+    printf '%s\n' "$(<"$1")"
 }
 
 # Read a file to an array (by line)
@@ -232,6 +200,7 @@ pure.file_to_array() {
     # Usage file_to_array ".Xresources"
     # Bash 4+
     mapfile -t file_data < "$1"
+    printf '%s\n' "${file_data[@]}"
 }
 
 # Get the first N lines of a file
@@ -271,11 +240,11 @@ pure.touch() {
 pure.extract() {
     # Usage: extract file "opening marker" "closing marker"
     while IFS=$'\n' read -r line; do
-        [[ "$extract" && "$line" != "$3" ]] && \
+        [[ $extract && $line != "$3" ]] &&
             printf '%s\n' "$line"
 
-        [[ "$line" == "$2" ]] && extract=1
-        [[ "$line" == "$3" ]] && extract=
+        [[ $line == "$2" ]] && extract=1
+        [[ $line == "$3" ]] && extract=
     done < "$1"
 }
 
@@ -295,102 +264,6 @@ pure.basename() {
     : "${1%/}"
     printf '%s\n' "${_##*/}"
 }
-
-# ---
-# VARIABLES
-# ---
-
-# Assign and access a variable using a variable
-
-# hello_world="test"
-
-# Create the variable name.
-# var1="world"
-# var2="hello_${var1}"
-
-# Print the value of the variable name stored in 'hello_$var1'.
-# printf '%s\n' "${!var2}"
-
-# ---
-# ESCAPE SEQUENCES
-# ---
-
-# Please take a look at the original github for that section
-
-# ---
-# PARAMETER EXPANSION
-# ---
-
-# Please take a look at the original github for that section
-
-# ---
-# ARITHMETIC
-# ---
-
-# Simpler syntax to set variables
-
-# Simple math
-# ((var=1+2))
-
-# Decrement/Increment variable
-# ((var++))
-# ((var--))
-# ((var+=1))
-# ((var-=1))
-
-# Using variables
-# ((var=var2*arr[2]))
-
-# -
-
-# Ternary Tests
-
-# Set the value of var to var2 if var2 is greater than var.
-# var: variable to set.
-# var2>var: Condition to test.
-# ?var2: If the test succeeds.
-# :var: If the test fails.
-# ((var=var2>var?var2:var))
-
-# ---
-# TRAPS
-# ---
-
-# Please take a look at the original github for that section
-
-# ---
-# PERFORMANCE
-# ---
-
-# Disable unicode.
-# LC_ALL=C
-# LANG=C
-
-# ---
-# OBSOLETE SYNTAX
-# ---
-
-# Shebang
-# Use: #!/usr/bin/env bash instead of #!/bin/bash
-
-# -
-
-# Command Substitution
-# Use: $() instead of ``
-
-# -
-
-# Function Declaration
-# Use:
-# fun() { }
-# Instead of:
-# function fun() { }
-
-# ---
-# INTERNAL VARIABLES
-# ---
-
-# Please take a look at the original github for that section
 
 # ---
 # INFORMATION ABOUT THE TERMINAL
@@ -441,75 +314,6 @@ pure.rgb_to_hex() {
 }
 
 # ---
-# CODE GOLF
-# ---
-
-# Shorter for loop syntax
-
-# Tiny C Style.
-# for((;i++<10;)){ echo "$i";}
-
-# Undocumented method.
-# for i in {1..10};{ echo "$i";}
-
-# Expansion.
-# for i in {1..10}; do echo "$i"; done
-
-# C Style.
-# for((i=0;i<=10;i++)); do echo "$i"; done
-
-# -
-
-# Shorter infinite loops
-
-# Normal method
-# while :; do echo hi; done
-
-# Shorter
-# for((;;)){ echo hi;}
-
-# -
-
-# Shorter function declaration
-
-# Normal method
-# f(){ echo hi;}
-
-# Using a subshell
-# f()(echo hi)
-
-# Using arithmetic
-# This can be used to assign integer values.
-# Example: f a=1
-#          f a++
-# f()(($1))
-
-# Using tests, loops etc.
-# NOTE: ‘while’, ‘until’, ‘case’, ‘(())’, ‘[[]]’ can also be used.
-# f()if true; then echo "$1"; fi
-# f()for i in "$@"; do echo "$i"; done
-
-# -
-
-# Shorter if syntax
-
-# One line
-# Note: The 3rd statement may run when the 1st is true
-# [[ "$var" == hello ]] && echo hi || echo bye
-# [[ "$var" == hello ]] && { echo hi; echo there; } || echo bye
-
-# Multi line (no else, single statement)
-# Note: The exit status may not be the same as with an if statement
-# [[ "$var" == hello ]] && \
-#     echo hi
-
-# Multi line (no else)
-# [[ "$var" == hello ]] && {
-#     echo hi
-#     # ...
-# }
-
-# ---
 # OTHER
 # ---
 
@@ -517,7 +321,7 @@ pure.rgb_to_hex() {
 pure.read_sleep() {
     # Usage: sleep 1
     #        sleep 0.2
-    read -rst "${1:-1}" -N 999
+    read -rt "$1" <> <(:) || :
 }
 
 # Check if a program is in the user's PATH
@@ -535,10 +339,10 @@ pure.date() {
 # Generate a UUID V4
 pure.uuid() {
     # Usage: uuid
-    local C="89ab"
+    C="89ab"
 
     for ((N=0;N<16;++N)); do
-        local B="$((RANDOM%256))"
+        B="$((RANDOM%256))"
 
         case "$N" in
             6)  printf '4%x' "$((B%16))" ;;
